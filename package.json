@@ -1,0 +1,20 @@
+{
+	"name": "interview",
+	"private": true,
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev:backend": "cd backend && npm run dev",
+		"dev:frontend": "cd frontend && npm run dev",
+		"dev": "npm i && concurrently -k -c \"auto\" \"npm:dev:*\"",
+		"setup": "npm i && cd backend && npm run db:migrate"
+	},
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"devDependencies": {
+		"@biomejs/biome": "^1.8.1",
+		"concurrently": "^8.2.2",
+		"typescript": "^5.7.2"
+	},
+	"workspaces": ["backend", "frontend"]
+}
