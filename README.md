@@ -1,5 +1,7 @@
 # Full-stack boilerplate
 
+> You can use this as a starting point for your own project, or use it as a reference for your own tech stack!
+
 ## Tech Stack
   - Frontend:
       - Typescript
@@ -14,14 +16,15 @@
 In order to use the boilerplate you will need the following:
 - Node.js 20+
 
-## Setup
+## Setup steps
 1. Pull the repo
   ```bash
-  git clone git@github.com:stepful/interview_template.git && cd interview_template
+  git clone git@github.com:stepful/fullstack_boilerplate.git && cd fullstack_boilerplate
   ```
 
 2. (Optional) Copy .env.sample to .env (should be sensible defaults, but feel free to make changes as desired)
   ```bash
+  cd backend # or frontend
   cp .env.sample .env
   ```
 
