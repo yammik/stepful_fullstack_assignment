@@ -19,13 +19,13 @@ server.get("/users", (_request, reply) => {
 });
 
 server.get("/quizzes", (_request, reply) => {
-	const data = db.prepare("SELECT * FROM quizzes").all();
+	const data = db.prepare("SELECT * FROM assignments").all();
 
 	return data;
 });
 
 server.get("/quizzes/:id", (request, reply) => {
-	const data = db.prepare("SELECT * FROM quizzes WHERE id = :id");
+	const data = db.prepare("SELECT * FROM assignments WHERE id = :id");
 
 	return data.get(request.params);
 });
