@@ -62,9 +62,7 @@ export function QuizDetailsPage() {
 					method: "POST",
 				})
 					.then((res) => res.json())
-					.then((json) => {
-						setAttempt(json.data);
-					});
+					.then((json) => setAttempt(json.data));
 			});
 	}, []);
 
@@ -77,7 +75,7 @@ export function QuizDetailsPage() {
 				body,
 			})
 				.then((res) => res.json())
-				.then(console.log);
+				.then((json) => setAttempt(json.data));
 		},
 		[attempt],
 	);
@@ -92,7 +90,7 @@ export function QuizDetailsPage() {
 			})
 				.then((res) => res.json())
 				.then((data) => {
-					console.log("finished attempt ", data);
+					setAttempt(data.json);
 					setStep(Step.Result);
 				});
 		},

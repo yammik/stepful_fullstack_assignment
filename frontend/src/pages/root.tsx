@@ -13,13 +13,20 @@ export function RootPage() {
 			.then((res) => res.json())
 			.then((json) => setQuizzes(json.data))
 			.catch(setError);
-	}, []);
 
-	useEffect(() => {
-		fetch(attemptsApiUrl({}))
-			.then((res) => res.json())
-			.then((json) => setAttempts(json.data))
-			.catch(setError);
+		function getAttempts() {
+			fetch(attemptsApiUrl({}))
+				.then((res) => res.json())
+				.then((json) => setAttempts(json.data))
+				.catch(setError);
+		}
+
+		// Load attempts
+		getAttempts();
+		// TODO: event-based for this take home for low lift. Would use debounce for more up-to-date attempts state.
+		window.addEventListener("focus", getAttempts);
+
+		return () => window.addEventListener("focus", getAttempts);
 	}, []);
 
 	const quizRowItems = useMemo<QuizRow[]>(() => {
@@ -29,7 +36,6 @@ export function RootPage() {
 
 		return quizzes.map((q) => {
 			const attempt = attemptMap.get(q.id);
-			console.log(q.title, attempt);
 			return { ...q, inProgress: !!attempt, attemptId: attempt?.id };
 		});
 	}, [quizzes, attempts]);
