@@ -40,7 +40,7 @@ export function QuizPage() {
 				<CardTitle>Quiz #{quiz.id}</CardTitle>
 				<CardDescription>Quiz details below...</CardDescription>
 			</CardHeader>
-			<CardContent>Quiz name: {quiz.name}</CardContent>
+			<CardContent>Quiz title: {quiz.title}</CardContent>
 			<CardFooter className="flex justify-between pt-8">
 				<Link
 					to={rootPath.pattern}
