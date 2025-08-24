@@ -158,6 +158,42 @@ server.get<AttemptsRouteGeneric>("/attempts/:id", (request, reply) => {
 	reply.send({ data: data.get({ id: request.params.id, userId }) });
 });
 
+/** POST /attempts/:id/answer updates an attempt with answer selections */
+server.post<AttemptsRouteGeneric>("/attempts/:id/answer", (request, reply) => {
+	// Verify attempt belongs to this user
+	const userId = request.user?.id ?? 1;
+	const data = db.prepare<{ id: string }, Attempt>(`
+		SELECT user_id FROM ${ATTEMPTS_TABLE_NAME} WHERE id = :id
+		`);
+
+	const attempt = data.get({ id: request.params.id });
+	if (!attempt || attempt.user_id !== userId) {
+		// unauthorized
+		reply.code(404).send({ error: "No such attempt for user" });
+		return;
+	}
+
+	// Update answer selections
+	const updateStmt = db.prepare(`
+		UPDATE ${ATTEMPTS_TABLE_NAME}
+		SET answer_selections = :answerSelections,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = :id
+	`);
+	updateStmt.run({
+		id: request.params.id,
+		answerSelections: request.body,
+	});
+
+	const newAttempt = db.prepare<{ id: string }, Attempt>(`
+		SELECT ${ATTEMPTS_BASE_QUERY}
+		FROM ${ATTEMPTS_TABLE_NAME}
+		WHERE id = :id
+		`);
+
+	reply.send({ data: newAttempt.get({ id: request.params.id }) });
+});
+
 /**
  * Run server
  */
