@@ -51,7 +51,7 @@ server.get("/", async (_request, _reply) => {
 server.get("/users", (_request, reply) => {
 	const data = db.prepare<[], User[]>("SELECT * FROM users").all();
 
-	return { data };
+	reply.send({ data });
 });
 
 /** GET /me fetches the session user's details (hardcoded in demo)  */
