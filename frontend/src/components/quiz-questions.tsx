@@ -83,45 +83,51 @@ export function QuizQuestions({
 	}, [onUpdate, methods.subscribe]);
 
 	return (
-		<Form {...methods}>
-			<form onSubmit={methods.handleSubmit(onSubmit)}>
-				{questions.map((q) => {
-					const questionId = String(q.id);
-					return (
-						<div key={q.id}>
-							<Controller
-								name={questionId}
-								control={methods.control}
-								render={({ field }) =>
-									q.choices ? (
-										<MultipleChoiceQuestion
-											questionId={questionId}
-											questionContent={q.questionContent}
-											choices={q.choices}
-											field={field}
+		<div className="container text-sm/7">
+			<Form {...methods}>
+				<form onSubmit={methods.handleSubmit(onSubmit)}>
+					<ol>
+						{questions.map((q) => {
+							const questionId = String(q.id);
+							return (
+								<li key={q.id}>
+									<fieldset className="mb-4">
+										<Controller
+											name={questionId}
+											control={methods.control}
+											render={({ field }) => (
+												<>
+													<legend>{q.questionContent}</legend>
+													{q.choices ? (
+														<MultipleChoiceQuestion
+															questionId={questionId}
+															choices={q.choices}
+															field={field}
+														/>
+													) : (
+														<FreeTextQuestion
+															field={field}
+															questionId={questionId}
+														/>
+													)}
+												</>
+											)}
 										/>
-									) : (
-										<FreeTextQuestion
-											field={field}
-											questionId={questionId}
-											questionContent={q.questionContent}
-										/>
-									)
-								}
-							/>
-						</div>
-					);
-				})}
-				<Button type="submit">Submit Quiz</Button>
-				{error ? <p>An error has occurred: {error.message}</p> : null}
-			</form>
-		</Form>
+									</fieldset>
+								</li>
+							);
+						})}
+					</ol>
+					<Button type="submit">Submit Quiz</Button>
+					{error ? <p>An error has occurred: {error.message}</p> : null}
+				</form>
+			</Form>
+		</div>
 	);
 }
 
 interface QuestionProps {
 	questionId: string;
-	questionContent: string;
 	field: ControllerRenderProps;
 }
 
@@ -131,13 +137,11 @@ interface MultipleChoiceQuestionProps extends QuestionProps {
 
 function MultipleChoiceQuestion({
 	questionId,
-	questionContent,
 	choices,
 	field,
 }: MultipleChoiceQuestionProps) {
 	return (
 		<>
-			<Label htmlFor={questionId}>{questionContent}</Label>
 			<RadioGroup
 				value={field.value ?? ""}
 				onValueChange={field.onChange}
@@ -157,15 +161,10 @@ function MultipleChoiceQuestion({
 	);
 }
 
-function FreeTextQuestion({
-	questionId,
-	questionContent,
-	field,
-}: QuestionProps) {
+function FreeTextQuestion({ questionId, field }: QuestionProps) {
 	return (
 		<div>
-			<Label htmlFor={questionId}>{questionContent}</Label>
-			<input
+			<textarea
 				id={questionId}
 				value={field.value ?? ""}
 				onChange={field.onChange}
