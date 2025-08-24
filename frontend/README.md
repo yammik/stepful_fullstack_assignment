@@ -19,9 +19,17 @@ This is the frontend of the quiz app, Quizard. Once you run `npm run dev` in the
 
 # Notes about what I did
 
-- I did not implement a dedicated `GET /quizzes/{id}` endpoint, since `GET /quizzes` returns all the necessary data to display a detail page for each quiz.
-- Also in production, mixing up the question/choice order would be a consideration.
+- In production, mixing up the question/choice order would be a consideration.
 
 # Trade offs
 
 - implicit UX flow vs. clarity, re: attempt resume/create. In production, I would use cache instead of state to observe attempts and invalidate cache frequently or refetch on window focus to prevent showing stale attempts.
+
+# TODO
+
+- [ ] Modify RHF watch so free text answer gets updated onBlur, or less frequently (not on every keystroke)
+- [ ] Submit flow of quiz
+- [ ] Text input style standardized with radix
+- [ ] In Quiz list view, sort quizzes by most recently attempted
+- [ ] Graded attempt view with score and feedback
+- [ ] View of past attempts of all quizzes
