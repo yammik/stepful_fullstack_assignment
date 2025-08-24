@@ -197,3 +197,25 @@ Not implemented yet, but these are possible errors for invalid answer selection 
 - 401 unauthorized
 - 404 not_found
 - 409 conflict_out_of_order or conflict_duplicate_submit
+
+ <!--
+- Should store attempt information, like time taken, how many times paused, final score
+- Ideally collect data from the quiz attempts to build a growth plan for student
+- Behavior analysis per question–collect time taken per question? see if AI can see a pattern
+ -->
+
+# Trade offs
+
+- _Updating answer choices on every question advance._ The choices are important data to save because they directly influence the final score. The final score is a part of licensure or employment success so should be treated with high fidelity and security.
+
+# Possible optimizations
+
+- _Question answer key table._ Answer keys could have been stored by a hashed column on the quiz_questions table. But an entirely separate table is better for least privilege and allows audit. endpoints that fetch quizzes never touch this table. Cons is that you have to do an extra join when grading, introduces more code lift and latency, and possible schema drift. I optimized for preventing leaks.
+- A middleware for `attempt.user_id` ownership check.
+
+# Notes about what I did
+
+- I did not implement a dedicated `GET /quizzes/{id}` endpoint, since `GET /quizzes` returns all the necessary data to display a detail page for each quiz.
+- Technically you could grade both MCQ and FT (free text) questions with LLM, but would incur increased infrastructural cost.
+- In production, I would not use autoincrementing integer as the primary key of a sensitive table like answer_keys.
+- `quiz` should have a `version` column and `attempt` should have a corresponding `quiz_version` so outdated attempts should be invalidated.
