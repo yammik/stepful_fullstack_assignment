@@ -155,13 +155,15 @@ server.post<QuizzesRouteGeneric>("/quizzes/:id/attempts", (request, reply) => {
 	reply.send({ data: newAttempt.get({ id: String(insert.lastInsertRowid) }) });
 });
 
-/** GET /attempts fetches all attempts belonging to a user across all quizzes */
+/** GET /attempts fetches all active (unfinished) attempts belonging to a user across all quizzes */
 server.get("/attempts", (request, reply) => {
 	const userId = String(request.user?.id ?? 1);
+	// TODO: Add a query param to specify whether all attempts should be queried, or just active ones
 	const data = db.prepare<{ userId: string }, Attempt[]>(`
 			SELECT ${ATTEMPTS_BASE_QUERY}
 			FROM ${ATTEMPTS_TABLE_NAME}
 			WHERE user_id = :userId
+			AND is_finished = 0
 		`);
 
 	reply.send({ data: data.all({ userId }) });
