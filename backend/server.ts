@@ -194,6 +194,43 @@ server.post<AttemptsRouteGeneric>("/attempts/:id/answer", (request, reply) => {
 	reply.send({ data: newAttempt.get({ id: request.params.id }) });
 });
 
+/** POST /attempts/:id/finish updates an attempt state to finished */
+server.post<AttemptsRouteGeneric>("/attempts/:id/finish", (request, reply) => {
+	// Verify attempt belongs to this user
+	const userId = request.user?.id ?? 1;
+	const data = db.prepare<{ id: string }, Attempt>(`
+		SELECT user_id
+		FROM ${ATTEMPTS_TABLE_NAME}
+		WHERE id = :id
+	`);
+	const attempt = data.get({ id: request.params.id });
+
+	if (!attempt || attempt.user_id !== userId) {
+		// unauthorized
+		reply.code(404).send({ error: "No such attempt for user" });
+		return;
+	}
+
+	// Update status
+	const updateStmt = db.prepare(`
+		UPDATE ${ATTEMPTS_TABLE_NAME}
+		SET is_finished = 1,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = :id
+	`);
+	const update = updateStmt.run({ id: request.params.id });
+
+	const updatedAttempt = db.prepare<{ id: string }, Attempt>(`
+			SELECT
+				${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE id = :id
+		`);
+
+	reply.send({ data: updatedAttempt.get({ id: request.params.id }) });
+	// Grading should happen at this point
+});
+
 /**
  * Run server
  */
