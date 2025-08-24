@@ -1,17 +1,38 @@
-import { type Quiz, QuizzesList } from "@/components/quiz";
-import { quizzesApiUrl } from "@/paths";
-import { useEffect, useState } from "react";
+import type { Attempt } from "@/components/attempt";
+import { type Quiz, type QuizRow, QuizzesList } from "@/components/quiz";
+import { attemptsApiUrl, quizzesApiUrl } from "@/paths";
+import { useEffect, useMemo, useState } from "react";
 
 export function RootPage() {
 	const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+	const [attempts, setAttempts] = useState<Attempt[]>([]);
 	const [error, setError] = useState<Error | null>(null);
 
 	useEffect(() => {
 		fetch(quizzesApiUrl({}))
 			.then((res) => res.json())
-			.then(setQuizzes)
+			.then((json) => setQuizzes(json.data))
 			.catch(setError);
 	}, []);
+
+	useEffect(() => {
+		fetch(attemptsApiUrl({}))
+			.then((res) => res.json())
+			.then((json) => setAttempts(json.data))
+			.catch(setError);
+	}, []);
+
+	const quizRowItems = useMemo<QuizRow[]>(() => {
+		const attemptMap = new Map<number, Attempt>(
+			attempts.map((a) => [a.quiz_id, a]),
+		);
+
+		return quizzes.map((q) => {
+			const attempt = attemptMap.get(q.id);
+			console.log(q.title, attempt);
+			return { ...q, inProgress: !!attempt, attemptId: attempt?.id };
+		});
+	}, [quizzes, attempts]);
 
 	if (error) return <div>An error has occurred: {error.message}</div>;
 
@@ -21,7 +42,7 @@ export function RootPage() {
 		<>
 			<div className="text-xl text-muted-foreground mt-5">Welcome back!</div>
 			<div className="mt-10 text-lg text-center">
-				<QuizzesList quizzes={quizzes} />
+				<QuizzesList quizzes={quizRowItems} />
 			</div>
 		</>
 	);
