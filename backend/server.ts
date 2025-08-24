@@ -1,5 +1,8 @@
 import cors from "@fastify/cors";
-import fastify, { type RouteGenericInterface } from "fastify";
+import fastify, {
+	type FastifyPluginCallback,
+	type RouteGenericInterface,
+} from "fastify";
 import { db } from "./db-client";
 import type { Question, Quiz, User } from "./model";
 
@@ -15,9 +18,23 @@ interface QuizzesRouteGeneric extends RouteGenericInterface {
 	};
 }
 
+const authMiddleware: FastifyPluginCallback = (fastify, _opts, done) => {
+	fastify.decorateRequest("user", null);
+
+	fastify.addHook("preHandler", (req, _reply, done) => {
+		// stub: Get user here
+
+		req.user = { id: "1" };
+		done();
+	});
+
+	done();
+};
+
 const server = fastify();
 
 server.register(cors, {});
+server.register(authMiddleware);
 
 const PORT = +(process.env.BACKEND_SERVER_PORT ?? 3001);
 
