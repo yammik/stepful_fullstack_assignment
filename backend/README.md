@@ -87,11 +87,14 @@ Returns the created attempt object.
 
 ```json
 {
-  "id": "0",
-  "quizId": "1",
-  "score": 0,
-  "finished": 0,
-  "updatedAt": "2025-08-22T15:00:00Z"
+  "id": "1",
+  "quiz_id": "1",
+  "user_id": "1",
+  "answer_selections": "",
+  "is_finished": 0,
+  "time_elapsed": 0,
+  "score": null,
+  "updated_at": "2025-08-22T15:10:00Z"
 }
 ```
 
@@ -107,11 +110,14 @@ Returns an unfinished attempt for given quiz, if any.
 
 ```json
 {
-  "id": "0",
-  "quizId": "1",
-  "score": 1,
-  "finished": 0,
-  "updatedAt": "2025-08-22T15:05:00Z"
+  "id": "1",
+  "quiz_id": "1",
+  "user_id": "1",
+  "answer_selections": "{\"1\": \"Tibia\", \"3\": \"Example answer here\"}",
+  "is_finished": 0,
+  "time_elapsed": 0,
+  "score": null,
+  "updated_at": "2025-08-22T15:10:00Z"
 }
 ```
 
@@ -127,11 +133,37 @@ Gets a specific attempt with the given ID.
 
 ```json
 {
-  "id": "0",
-  "quizId": "1",
-  "score": 1,
-  "finished": 0,
-  "updatedAt": "2025-08-22T15:05:00Z"
+  "id": "1",
+  "quiz_id": "1",
+  "user_id": "1",
+  "answer_selections": "",
+  "is_finished": 0,
+  "time_elapsed": 0,
+  "score": null,
+  "updated_at": "2025-08-22T15:10:00Z"
+}
+```
+
+#### `POST /attempts/{attemptId}/answer`
+
+##### Query Params
+
+- attemptId: ID of the attempt to update.
+
+##### Response
+
+Updates the specified attempt field `answer_selections` with a JSON blob. The JSON blob is a key-value pair of question ID and the answer choice/text selected by the student.
+
+```json
+{
+  "id": "1",
+  "quiz_id": "1",
+  "user_id": "1",
+  "answer_selections": "{\"1\": \"Tibia\", \"2\": \"Tibia\", \"3\": \"Example answer here\"}",
+  "is_finished": 0,
+  "time_elapsed": 0,
+  "score": null,
+  "updated_at": "2025-08-22T15:10:00Z"
 }
 ```
 
@@ -147,11 +179,14 @@ Updates the specified attempt to mark a completed quiz attempt. This means the a
 
 ```json
 {
-  "id": "0",
-  "quizId": "1",
+  "id": "1",
+  "quiz_id": "1",
+  "user_id": "1",
+  "answer_selections": "{\"1\": \"Tibia\", \"2\": \"Tibia\", \"3\": \"Example answer here\"}",
+  "is_finished": 1,
+  "time_elapsed": 2495,
   "score": 4,
-  "finished": 1,
-  "updatedAt": "2025-08-22T15:10:00Z"
+  "updated_at": "2025-08-22T15:10:00Z"
 }
 ```
 
@@ -173,13 +208,12 @@ Attempt
 ```json
 {
   "id": "string",
-  "quizId": "string",
-  "userId": "string",
-  "current": 0,
+  "quiz_id": "string",
+  "user_id": "string",
+  "answer_selections": "string",
   "score": 0,
-  "finished": false,
-  "version": 0,
-  "updatedAt": "ISO-8601"
+  "is_finished": false,
+  "updated_at": "ISO-8601"
 }
 ```
 
