@@ -1,6 +1,6 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 import { Layout } from "@/components/layout";
-import { QuizPage } from "@/pages/quiz";
+import { QuizDetailsPage } from "@/pages/quiz-details";
 import { RootPage } from "@/pages/root";
 import { rootPath, quizPath } from "@/paths";
 
@@ -15,7 +15,7 @@ const router = createBrowserRouter([
 			},
 			{
 				path: quizPath.pattern,
-				element: <QuizPage />,
+				element: <QuizDetailsPage />,
 			},
 		],
 	},
