@@ -12,6 +12,8 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import {
+	attemptAnswerApiUrl,
+	attemptFinishApiUrl,
 	quizActiveAttemptApiUrl,
 	quizApiUrl,
 	quizAttemptApiUrl,
@@ -23,8 +25,7 @@ import { Link, useParams } from "react-router-dom";
 enum Step {
 	Details = 0,
 	Questions = 1,
-	Review = 2,
-	Result = 3,
+	Result = 2,
 }
 
 export function QuizDetailsPage() {
@@ -67,6 +68,37 @@ export function QuizDetailsPage() {
 			});
 	}, []);
 
+	const updateAnswerSelections = useCallback(
+		(body: string) => {
+			if (!attempt) return;
+
+			fetch(attemptAnswerApiUrl({ id: String(attempt.id) }), {
+				method: "POST",
+				body,
+			})
+				.then((res) => res.json())
+				.then(console.log);
+		},
+		[attempt],
+	);
+
+	const finishAttempt = useCallback(
+		(body: string) => {
+			if (!attempt) return;
+
+			fetch(attemptFinishApiUrl({ id: String(attempt.id) }), {
+				method: "POST",
+				body,
+			})
+				.then((res) => res.json())
+				.then((data) => {
+					console.log("finished attempt ", data);
+					setStep(Step.Result);
+				});
+		},
+		[attempt],
+	);
+
 	const StepContent = useCallback(() => {
 		if (!quiz) {
 			return null;
@@ -85,13 +117,34 @@ export function QuizDetailsPage() {
 				);
 			case Step.Questions:
 				if (!attempt) {
+					// TODO: Better error/edge case handling here
 					return <div className="text-center p-8">Loading...</div>;
 				}
-				return <QuizQuestions quiz={quiz} attempt={attempt} />;
+				return (
+					<QuizQuestions
+						quiz={quiz}
+						attempt={attempt}
+						onUpdate={updateAnswerSelections}
+						onFinish={finishAttempt}
+					/>
+				);
 			case Step.Result:
-				return <QuizResults />;
+				if (!attempt) {
+					return (
+						// TODO: Better error/edge case handling here
+						<div className="text-center p-8">No attempt result to view</div>
+					);
+				}
+				return <QuizResults attempt={attempt} />;
 		}
-	}, [step, quiz, attempt, ensureCreateAttempt]);
+	}, [
+		step,
+		quiz,
+		attempt,
+		ensureCreateAttempt,
+		updateAnswerSelections,
+		finishAttempt,
+	]);
 
 	if (error)
 		return (
