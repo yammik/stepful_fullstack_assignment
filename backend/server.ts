@@ -4,7 +4,7 @@ import fastify, {
 	type RouteGenericInterface,
 } from "fastify";
 import { db } from "./db-client";
-import type { Question, Quiz, User } from "./model";
+import type { Attempt, Question, Quiz, User } from "./model";
 
 declare module "fastify" {
 	interface FastifyRequest {
@@ -13,6 +13,12 @@ declare module "fastify" {
 }
 
 interface QuizzesRouteGeneric extends RouteGenericInterface {
+	Params: {
+		id: string;
+	};
+}
+
+interface AttemptsRouteGeneric extends RouteGenericInterface {
 	Params: {
 		id: string;
 	};
@@ -82,6 +88,169 @@ server.get<QuizzesRouteGeneric>("/quizzes/:id/questions", (request, reply) => {
 	`);
 
 	reply.send({ data: data.all({ id: request.params.id }) });
+});
+
+const ATTEMPTS_BASE_QUERY =
+	"id, quiz_id, answer_selections, is_finished, created_at, updated_at";
+const ATTEMPTS_TABLE_NAME = "attempts";
+
+/** GET /quizzes/:id/attempts/active fetches any unfinished attempt for the specified quiz */
+server.get<QuizzesRouteGeneric>(
+	"/quizzes/:id/attempts/active",
+	(request, reply) => {
+		const userId = request.user?.id ?? 1;
+		const data = db.prepare<{ userId: string; quizId: string }, Attempt>(`
+			SELECT ${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE user_id = :userId
+			AND quiz_id = :quizId
+			AND is_finished = 0
+		`);
+
+		reply.send({
+			data: data.get({
+				userId: String(userId),
+				quizId: String(request.params.id),
+			}),
+		});
+	},
+);
+
+/** POST /quizzes/:id/attempts reads or creates an attempt for a quiz */
+server.post<QuizzesRouteGeneric>("/quizzes/:id/attempts", (request, reply) => {
+	const userId = String(request.user?.id ?? 1);
+	const quizId = String(request.params.id);
+
+	// Do they already have an active attempt for this quiz?
+	const data = db.prepare<{ userId: string; quizId: string }, Attempt>(`
+			SELECT ${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE user_id = :userId
+			AND quiz_id = :quizId
+			AND is_finished = 0
+		`);
+
+	const attempt = data.get({ userId, quizId });
+
+	if (attempt) {
+		reply.send({ data: attempt });
+	}
+
+	// Otherwise, make a new attempt
+	const insertStmt = db.prepare<{ userId: string; quizId: string }, Attempt>(`
+		INSERT INTO attempts
+			(user_id, quiz_id)
+		VALUES
+			(:userId, :quizId)
+	`);
+	const insert = insertStmt.run({ userId, quizId });
+
+	const newAttempt = db.prepare<{ id: string }, Attempt>(`
+			SELECT
+				${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE id = :id
+		`);
+
+	reply.send({ data: newAttempt.get({ id: String(insert.lastInsertRowid) }) });
+});
+
+/** GET /attempts fetches all attempts belonging to a user across all quizzes */
+server.get("/attempts", (request, reply) => {
+	const userId = String(request.user?.id ?? 1);
+	const data = db.prepare<{ userId: string }, Attempt[]>(`
+			SELECT ${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE user_id = :userId
+		`);
+
+	reply.send({ data: data.all({ userId }) });
+});
+
+/** GET /attempts/{id} fetches a user-scoped quiz attempt by ID */
+server.get<AttemptsRouteGeneric>("/attempts/:id", (request, reply) => {
+	const userId = String(request.user?.id ?? 1);
+	const data = db.prepare<{ id: string; userId: string }, Attempt>(`
+			SELECT ${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE id = :id
+			AND user_id = :userId
+		`);
+
+	reply.send({ data: data.get({ id: request.params.id, userId }) });
+});
+
+/** POST /attempts/:id/answer updates an attempt with answer selections */
+server.post<AttemptsRouteGeneric>("/attempts/:id/answer", (request, reply) => {
+	// Verify attempt belongs to this user
+	const userId = request.user?.id ?? 1;
+	const data = db.prepare<{ id: string }, Attempt>(`
+		SELECT user_id FROM ${ATTEMPTS_TABLE_NAME} WHERE id = :id
+		`);
+
+	const attempt = data.get({ id: request.params.id });
+	if (!attempt || attempt.user_id !== userId) {
+		// unauthorized
+		reply.code(404).send({ error: "No such attempt for user" });
+		return;
+	}
+
+	// Update answer selections
+	const updateStmt = db.prepare(`
+		UPDATE ${ATTEMPTS_TABLE_NAME}
+		SET answer_selections = :answerSelections,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = :id
+	`);
+	updateStmt.run({
+		id: request.params.id,
+		answerSelections: request.body,
+	});
+
+	const newAttempt = db.prepare<{ id: string }, Attempt>(`
+		SELECT ${ATTEMPTS_BASE_QUERY}
+		FROM ${ATTEMPTS_TABLE_NAME}
+		WHERE id = :id
+		`);
+
+	reply.send({ data: newAttempt.get({ id: request.params.id }) });
+});
+
+/** POST /attempts/:id/finish updates an attempt state to finished */
+server.post<AttemptsRouteGeneric>("/attempts/:id/finish", (request, reply) => {
+	// Verify attempt belongs to this user
+	const userId = request.user?.id ?? 1;
+	const data = db.prepare<{ id: string }, Attempt>(`
+		SELECT user_id
+		FROM ${ATTEMPTS_TABLE_NAME}
+		WHERE id = :id
+	`);
+	const attempt = data.get({ id: request.params.id });
+
+	if (!attempt || attempt.user_id !== userId) {
+		// unauthorized
+		reply.code(404).send({ error: "No such attempt for user" });
+		return;
+	}
+
+	// Update status
+	const updateStmt = db.prepare(`
+		UPDATE ${ATTEMPTS_TABLE_NAME}
+		SET is_finished = 1,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = :id
+	`);
+	const update = updateStmt.run({ id: request.params.id });
+
+	const updatedAttempt = db.prepare<{ id: string }, Attempt>(`
+			SELECT
+				${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE id = :id
+		`);
+
+	reply.send({ data: updatedAttempt.get({ id: request.params.id }) });
+	// Grading should happen at this point
 });
 
 /**
