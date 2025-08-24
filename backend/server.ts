@@ -1,6 +1,19 @@
 import cors from "@fastify/cors";
-import fastify from "fastify";
+import fastify, { type RouteGenericInterface } from "fastify";
 import { db } from "./db-client";
+import type { Question, Quiz, User } from "./model";
+
+declare module "fastify" {
+	interface FastifyRequest {
+		user?: { id: string };
+	}
+}
+
+interface QuizzesRouteGeneric extends RouteGenericInterface {
+	Params: {
+		id: string;
+	};
+}
 
 const server = fastify();
 
@@ -13,23 +26,41 @@ server.get("/", async (_request, _reply) => {
 });
 
 server.get("/users", (_request, reply) => {
-	const data = db.prepare("SELECT * FROM users").all();
+	const data = db.prepare<[], User[]>("SELECT * FROM users").all();
 
-	return data;
+	reply.send({ data });
 });
 
+/** GET /quizzes fetches all quizzes */
 server.get("/quizzes", (_request, reply) => {
-	const data = db.prepare("SELECT * FROM assignments").all();
+	const data = db.prepare<[], Quiz[]>("SELECT * FROM quizzes").all();
 
-	return data;
+	reply.send({ data });
 });
 
-server.get("/quizzes/:id", (request, reply) => {
-	const data = db.prepare("SELECT * FROM assignments WHERE id = :id");
+/** GET /quizzes/:id fetches a quiz */
+server.get<QuizzesRouteGeneric>("/quizzes/:id", (request, reply) => {
+	const data = db.prepare<{ id: string }, Quiz>(
+		"SELECT * FROM quizzes WHERE id = :id",
+	);
 
-	return data.get(request.params);
+	reply.send({ data: data.get({ id: request.params.id }) });
 });
 
+/** GET /quizzes/:id/questions fetches all questions for a quiz */
+server.get<QuizzesRouteGeneric>("/quizzes/:id/questions", (request, reply) => {
+	const data = db.prepare<{ id: string }, Question[]>(`
+		SELECT *
+		FROM quiz_questions
+		WHERE quiz_id = :id
+	`);
+
+	reply.send({ data: data.all({ id: request.params.id }) });
+});
+
+/**
+ * Run server
+ */
 server.listen({ port: PORT }, (err) => {
 	if (err) {
 		console.error(err);
