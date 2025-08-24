@@ -31,6 +31,15 @@ server.get("/users", (_request, reply) => {
 	reply.send({ data });
 });
 
+/** GET /me fetches the session user's details (hardcoded in demo)  */
+server.get("/me", (request, reply) => {
+	const data = db.prepare<{ id: string }, User[]>(
+		"SELECT * FROM users WHERE id = :id",
+	);
+
+	reply.send({ data: data.get({ id: request.user?.id ?? "1" }) });
+});
+
 /** GET /quizzes fetches all quizzes */
 server.get("/quizzes", (_request, reply) => {
 	const data = db.prepare<[], Quiz[]>("SELECT * FROM quizzes").all();
