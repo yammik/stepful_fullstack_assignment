@@ -3,10 +3,14 @@ import type { Quiz } from "@/components/quiz";
 import { Form } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { attemptAnswerApiUrl, questionsApiUrl } from "@/paths";
-import { TextField } from "@radix-ui/themes";
+import {
+	attemptAnswerApiUrl,
+	attemptFinishApiUrl,
+	questionsApiUrl,
+} from "@/paths";
 import { useCallback, useEffect, useState } from "react";
 import { Controller, type FieldValues, useForm } from "react-hook-form";
+import { Button } from "./ui/button";
 
 type Question = {
 	id: number;
@@ -44,9 +48,15 @@ export function QuizQuestions({
 		defaultValues: JSON.parse(attempt.answer_selections),
 	});
 
-	const onSubmit = useCallback((values: FieldValues) => {
-		console.log(values);
-	}, []);
+	const onSubmit = useCallback(
+		(values: FieldValues) => {
+			fetch(attemptFinishApiUrl({ id: String(attempt.id) }), {
+				method: "POST",
+				body: JSON.stringify(values),
+			});
+		},
+		[attempt.id],
+	);
 
 	useEffect(() => {
 		const callback = methods.subscribe({
@@ -54,12 +64,13 @@ export function QuizQuestions({
 				values: true,
 			},
 			callback: ({ values }) => {
-				console.log("updating attempt");
-
+				console.log("updating");
 				fetch(attemptAnswerApiUrl({ id: String(attempt.id) }), {
 					method: "POST",
 					body: JSON.stringify(values),
-				});
+				})
+					.then((res) => res.json())
+					.then(console.log);
 			},
 		});
 
@@ -107,11 +118,7 @@ export function QuizQuestions({
 									render={({ field }) => (
 										<div>
 											<Label htmlFor={questionId}>{q.question_content}</Label>
-											<input
-												{...field}
-												id={questionId}
-												onChange={field.onChange}
-											/>
+											<input {...field} id={questionId} />
 										</div>
 									)}
 								/>
@@ -119,6 +126,7 @@ export function QuizQuestions({
 						</div>
 					);
 				})}
+				<Button type="submit">Submit Quiz</Button>
 			</form>
 		</Form>
 	);

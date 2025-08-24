@@ -27,6 +27,8 @@ This is the frontend of the quiz app, Quizard. Once you run `npm run dev` in the
 
 # TODO
 
+- [ ] Error handling in QuizQuestions
+- [ ] Progress percentage
 - [ ] Modify RHF watch so free text answer gets updated onBlur, or less frequently (not on every keystroke)
 - [ ] Submit flow of quiz
 - [ ] Text input style standardized with radix
