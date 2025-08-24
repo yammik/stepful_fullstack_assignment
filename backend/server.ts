@@ -133,6 +133,31 @@ server.post<QuizzesRouteGeneric>("/quizzes/:id/attempts", (request, reply) => {
 	reply.send({ data: newAttempt.get({ id: String(insert.lastInsertRowid) }) });
 });
 
+/** GET /attempts fetches all attempts belonging to a user across all quizzes */
+server.get("/attempts", (request, reply) => {
+	const userId = String(request.user?.id ?? 1);
+	const data = db.prepare<{ userId: string }, Attempt[]>(`
+			SELECT ${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE user_id = :userId
+		`);
+
+	reply.send({ data: data.all({ userId }) });
+});
+
+/** GET /attempts/{id} fetches a user-scoped quiz attempt by ID */
+server.get<AttemptsRouteGeneric>("/attempts/:id", (request, reply) => {
+	const userId = String(request.user?.id ?? 1);
+	const data = db.prepare<{ id: string; userId: string }, Attempt>(`
+			SELECT ${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE id = :id
+			AND user_id = :userId
+		`);
+
+	reply.send({ data: data.get({ id: request.params.id, userId }) });
+});
+
 /**
  * Run server
  */
