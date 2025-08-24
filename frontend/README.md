@@ -4,34 +4,23 @@ This is the frontend of the quiz app, Quizard. Once you run `npm run dev` in the
 
 # TODO
 
-- [x] Quiz preview page
-- [x] Begin quiz flow (get questions, read/create attempt)
-- [x] Question flow
-- [x] Select answer choice
-- [x] save progress on select
-- [ ] Submit quiz for grading flow (update attempt to set finished=1)
-- [ ] Exit out of quiz, resume.
-
-# Nice to have (future feature)
-
-- [ ] per-user metrics
-- [ ] Autosave progress with debounce
-
-# Notes about what I did
-
-- In production, mixing up the question/choice order would be a consideration.
-
-# Trade offs
-
-- implicit UX flow vs. clarity, re: attempt resume/create. In production, I would use cache instead of state to observe attempts and invalidate cache frequently or refetch on window focus to prevent showing stale attempts.
-
-# TODO
-
 - [ ] Error handling in QuizQuestions
 - [ ] Progress percentage
 - [ ] Modify RHF watch so free text answer gets updated onBlur, or less frequently (not on every keystroke)
-- [ ] Submit flow of quiz
 - [ ] Text input style standardized with radix
-- [ ] In Quiz list view, sort quizzes by most recently attempted
 - [ ] Graded attempt view with score and feedback
-- [ ] View of past attempts of all quizzes
+
+# Nice to have (future feature)
+
+- Metrics on attempts (scores, time taken, etc)
+- Autosave progress with debounce instead of on update
+- Debounce refresh of attempt state
+- Shuffle the question/choice order to improve test integrity
+- Progress percentage based on number of questions solved
+- View of all past quiz attempts
+- In Quiz list view, hoist quizzes that were most recently attempted but not finished
+
+# Trade offs
+
+- Implicit UX flow vs. clarity, re: attempt resume/create. The UI-API interaction could have been more granular for clarity of the data flow, instead of combining read and create in one endpoint. For the sake of smoother UX (because testing anxiety is real and doesn't need to be exacerbated with slow UX), I chose to combine the operations into one endpoint.
+- In production, I would use cache instead of state to observe attempts and invalidate cache frequently or refetch on window focus to prevent showing stale attempts. As it is possible for the user to pause on one browser window or computer and resume in another, a stale attempt state could be confusing and even introduce a pathway to corrupt the attempt data. So some sort of mechanism to keep client state fresh is necessary.
