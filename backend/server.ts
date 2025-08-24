@@ -94,6 +94,28 @@ const ATTEMPTS_BASE_QUERY =
 	"id, quiz_id, answer_selections, is_finished, created_at, updated_at";
 const ATTEMPTS_TABLE_NAME = "attempts";
 
+/** GET /quizzes/:id/attempts/active fetches any unfinished attempt for the specified quiz */
+server.get<QuizzesRouteGeneric>(
+	"/quizzes/:id/attempts/active",
+	(request, reply) => {
+		const userId = request.user?.id ?? 1;
+		const data = db.prepare<{ userId: string; quizId: string }, Attempt>(`
+			SELECT ${ATTEMPTS_BASE_QUERY}
+			FROM ${ATTEMPTS_TABLE_NAME}
+			WHERE user_id = :userId
+			AND quiz_id = :quizId
+			AND is_finished = 0
+		`);
+
+		reply.send({
+			data: data.get({
+				userId: String(userId),
+				quizId: String(request.params.id),
+			}),
+		});
+	},
+);
+
 /** POST /quizzes/:id/attempts reads or creates an attempt for a quiz */
 server.post<QuizzesRouteGeneric>("/quizzes/:id/attempts", (request, reply) => {
 	const userId = String(request.user?.id ?? 1);
