@@ -8,13 +8,24 @@ import {
 	attemptFinishApiUrl,
 	questionsApiUrl,
 } from "@/paths";
-import { useCallback, useEffect, useState } from "react";
-import { Controller, type FieldValues, useForm } from "react-hook-form";
+import {
+	EventHandler,
+	SyntheticEvent,
+	useCallback,
+	useEffect,
+	useState,
+} from "react";
+import {
+	Controller,
+	ControllerRenderProps,
+	type FieldValues,
+	useForm,
+} from "react-hook-form";
 import { Button } from "./ui/button";
 
 type Question = {
 	id: number;
-	question_content: string;
+	questionContent: string;
 	choices: string[];
 };
 
@@ -30,16 +41,20 @@ export function QuizQuestions({
 		fetch(questionsApiUrl({ quizId: String(quiz.id) }))
 			.then((res) => res.json())
 			.then((json) => {
-				const questionSet = json.data?.map(
-					(d: Question & { choices: string | null }) => {
+				const questionsData = json.data?.map(
+					(d: {
+						id: string;
+						question_content: string;
+						choices: string | null;
+					}) => {
 						return {
 							id: d.id,
-							question_content: d.question_content,
+							questionContent: d.question_content,
 							choices: d.choices?.split(";;") ?? null,
 						};
 					},
 				);
-				setQuestions(questionSet);
+				setQuestions(questionsData);
 			})
 			.catch(setError);
 	}, [quiz]);
@@ -84,50 +99,90 @@ export function QuizQuestions({
 					const questionId = String(q.id);
 					return (
 						<div key={q.id}>
-							{q.choices ? (
-								// Multiple choice
-								<Controller
-									name={questionId}
-									control={methods.control}
-									render={({ field }) => (
-										<>
-											<p>{q.question_content}</p>
-											<RadioGroup
-												value={field.value ?? ""}
-												onValueChange={field.onChange}
-												aria-label={`Question ${q.id}`}
-											>
-												{q.choices?.map((c, i) => {
-													const key = `${q.id}&${i}`;
-													return (
-														<div key={key} style={{ display: "flex" }}>
-															<RadioGroupItem id={key} value={c} />
-															<Label htmlFor={key}>{c}</Label>
-														</div>
-													);
-												})}
-											</RadioGroup>
-										</>
-									)}
-								/>
-							) : (
-								// Free text
-								<Controller
-									name={questionId}
-									control={methods.control}
-									render={({ field }) => (
-										<div>
-											<Label htmlFor={questionId}>{q.question_content}</Label>
-											<input {...field} id={questionId} />
-										</div>
-									)}
-								/>
-							)}
+							<Controller
+								name={questionId}
+								control={methods.control}
+								render={({ field }) =>
+									q.choices ? (
+										<MultipleChoiceQuestion
+											questionId={questionId}
+											questionContent={q.questionContent}
+											choices={q.choices}
+											field={field}
+										/>
+									) : (
+										<FreeTextQuestion
+											field={field}
+											questionId={questionId}
+											questionContent={q.questionContent}
+										/>
+									)
+								}
+							/>
 						</div>
 					);
 				})}
 				<Button type="submit">Submit Quiz</Button>
+				{error ? <p>An error has occurred: {error.message}</p> : null}
 			</form>
 		</Form>
+	);
+}
+
+interface QuestionProps {
+	questionId: string;
+	questionContent: string;
+	field: ControllerRenderProps;
+}
+
+interface MultipleChoiceQuestionProps extends QuestionProps {
+	choices: string[];
+}
+
+function MultipleChoiceQuestion({
+	questionId,
+	questionContent,
+	choices,
+	field,
+}: MultipleChoiceQuestionProps) {
+	return (
+		<>
+			<Label htmlFor={questionId}>{questionContent}</Label>
+			<RadioGroup
+				value={field.value ?? ""}
+				onValueChange={field.onChange}
+				aria-label={`Question ${questionId}`}
+			>
+				{choices.map((c, i) => {
+					const key = `${questionId}&${i}`;
+					return (
+						<div key={key} style={{ display: "flex" }}>
+							<RadioGroupItem id={key} value={c} />
+							<Label htmlFor={key}>{c}</Label>
+						</div>
+					);
+				})}
+			</RadioGroup>
+		</>
+	);
+}
+
+function FreeTextQuestion({
+	questionId,
+	questionContent,
+	field,
+}: QuestionProps) {
+	return (
+		<div>
+			<Label htmlFor={questionId}>{questionContent}</Label>
+			<input
+				id={questionId}
+				value={field.value ?? ""}
+				onChange={field.onChange}
+				onBlur={field.onBlur}
+				placeholder="Type your answer"
+				aria-label={`Question ${questionId}`}
+			/>
+		</div>
 	);
 }

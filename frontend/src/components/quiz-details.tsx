@@ -9,11 +9,13 @@ export function QuizDetails({
 		<>
 			<p>{title}</p>
 			{hasAttempt ? (
-				<div>You have an incomplete attempt to finish this quiz.</div>
-			) : null}
-			<Button onClick={() => onNext()}>
-				{hasAttempt ? "Resume " : "Begin "}Quiz
-			</Button>
+				<>
+					<div>You have an incomplete attempt to finish this quiz.</div>
+					<Button onClick={() => onNext()}>Resume Quiz</Button>
+				</>
+			) : (
+				<Button onClick={() => onNext()}>Begin Quiz</Button>
+			)}
 		</>
 	);
 }
