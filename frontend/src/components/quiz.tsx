@@ -10,36 +10,42 @@ import {
 import { quizPath } from "@/paths";
 import { Link } from "react-router-dom";
 
-function QuizItem({ name, id }: Quiz) {
+export type Quiz = {
+	id: number;
+	title: string;
+};
+
+export type QuizRow = Quiz & {
+	inProgress: boolean;
+};
+
+function QuizRow({ title, id, inProgress }: QuizRow) {
 	return (
-		<TableRow>
+		<TableRow key={id}>
 			<TableCell>{id}</TableCell>
-			<TableCell>{name}</TableCell>
+			<TableCell>{title}</TableCell>
+			<TableCell>{inProgress ? <p>In progress</p> : null}</TableCell>
 			<TableCell>
 				<Button asChild>
-					<Link to={quizPath({ id: id.toString() })}>Take quiz</Link>
+					<Link to={quizPath({ id: id.toString() })}>View Quiz</Link>
 				</Button>
 			</TableCell>
 		</TableRow>
 	);
 }
 
-export type Quiz = {
-	id: number;
-	name: string;
-};
-
-export function QuizzesList({ quizzes }: { quizzes: Quiz[] }) {
+export function QuizzesList({ quizzes }: { quizzes: QuizRow[] }) {
 	return (
 		<Table>
 			<TableHeader>
 				<TableRow>
 					<TableHead>ID</TableHead>
-					<TableHead>Name</TableHead>
+					<TableHead>Title</TableHead>
+					<TableHead>Progress</TableHead>
 					<TableHead>Actions</TableHead>
 				</TableRow>
 			</TableHeader>
-			<TableBody>{quizzes.map((quiz) => QuizItem(quiz))}</TableBody>
+			<TableBody>{quizzes.map((quiz) => QuizRow(quiz))}</TableBody>
 		</Table>
 	);
 }
