@@ -3,23 +3,13 @@ import type { Quiz } from "@/components/quiz";
 import { Form } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-	attemptAnswerApiUrl,
-	attemptFinishApiUrl,
-	questionsApiUrl,
-} from "@/paths";
-import {
-	EventHandler,
-	SyntheticEvent,
-	useCallback,
-	useEffect,
-	useState,
-} from "react";
+import { questionsApiUrl } from "@/paths";
+import { useCallback, useEffect, useState } from "react";
 import {
 	Controller,
-	ControllerRenderProps,
-	type FieldValues,
 	useForm,
+	type ControllerRenderProps,
+	type FieldValues,
 } from "react-hook-form";
 import { Button } from "./ui/button";
 
@@ -29,10 +19,19 @@ type Question = {
 	choices: string[];
 };
 
+interface QuizQuestionsProps {
+	quiz: Quiz;
+	attempt: Attempt;
+	onUpdate(body: string): void;
+	onFinish(body: string): void;
+}
+
 export function QuizQuestions({
 	quiz,
 	attempt,
-}: { quiz: Quiz; attempt: Attempt }) {
+	onUpdate,
+	onFinish,
+}: QuizQuestionsProps) {
 	const [questions, setQuestions] = useState<Question[]>([]);
 	const [error, setError] = useState<Error | null>(null);
 
@@ -65,12 +64,9 @@ export function QuizQuestions({
 
 	const onSubmit = useCallback(
 		(values: FieldValues) => {
-			fetch(attemptFinishApiUrl({ id: String(attempt.id) }), {
-				method: "POST",
-				body: JSON.stringify(values),
-			});
+			onFinish(JSON.stringify(values));
 		},
-		[attempt.id],
+		[onFinish],
 	);
 
 	useEffect(() => {
@@ -79,18 +75,12 @@ export function QuizQuestions({
 				values: true,
 			},
 			callback: ({ values }) => {
-				console.log("updating");
-				fetch(attemptAnswerApiUrl({ id: String(attempt.id) }), {
-					method: "POST",
-					body: JSON.stringify(values),
-				})
-					.then((res) => res.json())
-					.then(console.log);
+				onUpdate(JSON.stringify(values));
 			},
 		});
 
 		return () => callback();
-	}, [attempt, methods.subscribe]);
+	}, [onUpdate, methods.subscribe]);
 
 	return (
 		<Form {...methods}>
