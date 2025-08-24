@@ -89,8 +89,8 @@ export function QuizDetailsPage() {
 				body,
 			})
 				.then((res) => res.json())
-				.then((data) => {
-					setAttempt(data.json);
+				.then((json) => {
+					setAttempt(json.data);
 					setStep(Step.Result);
 				});
 		},
