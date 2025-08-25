@@ -14,10 +14,11 @@ This is the frontend of the quiz app, Quizard. Once you run `npm run dev` in the
 - [ ] Autosave progress with debounce instead of on change event
 - [ ] Debounce refresh of attempt state instead of refresh on window wake
 
-# Future feature (Nice to haves)
+# Future features (Nice to haves)
 
 - View of all past quiz attempts
 - View metrics on attempts (scores, time taken, etc)
 - Shuffle the question/choice order to improve test integrity
 - In Quiz list view, hoist quizzes that were most recently attempted but not finished
-
+- Replace some of the client state management with React Query cache. I kept `useState` for this take-home because adding caching would have added a considerable amount of QA surface area.
+- API performance metrics, more advanced error logging
