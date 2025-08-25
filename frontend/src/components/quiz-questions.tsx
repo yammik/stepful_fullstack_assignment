@@ -40,20 +40,19 @@ export function QuizQuestions({
 		fetch(questionsApiUrl({ quizId: String(quiz.id) }))
 			.then((res) => res.json())
 			.then((json) => {
-				const questionsData = json.data?.map(
+				const data = json.data ?? [];
+				const q = data.map(
 					(d: {
 						id: string;
 						question_content: string;
 						choices: string | null;
-					}) => {
-						return {
-							id: d.id,
-							questionContent: d.question_content,
-							choices: d.choices?.split(";;") ?? null,
-						};
-					},
+					}) => ({
+						id: d.id,
+						questionContent: d.question_content,
+						choices: d.choices?.split(";;") ?? null,
+					}),
 				);
-				setQuestions(questionsData);
+				setQuestions(q);
 			})
 			.catch(setError);
 	}, [quiz]);
@@ -141,23 +140,21 @@ function MultipleChoiceQuestion({
 	field,
 }: MultipleChoiceQuestionProps) {
 	return (
-		<>
-			<RadioGroup
-				value={field.value ?? ""}
-				onValueChange={field.onChange}
-				aria-label={`Question ${questionId}`}
-			>
-				{choices.map((c, i) => {
-					const key = `${questionId}&${i}`;
-					return (
-						<div key={key} style={{ display: "flex" }}>
-							<RadioGroupItem id={key} value={c} />
-							<Label htmlFor={key}>{c}</Label>
-						</div>
-					);
-				})}
-			</RadioGroup>
-		</>
+		<RadioGroup
+			value={field.value ?? ""}
+			onValueChange={field.onChange}
+			aria-label={`Question ${questionId}`}
+		>
+			{choices.map((c, i) => {
+				const key = `${questionId}&${i}`;
+				return (
+					<div key={key} style={{ display: "flex" }}>
+						<RadioGroupItem id={key} value={c} />
+						<Label htmlFor={key}>{c}</Label>
+					</div>
+				);
+			})}
+		</RadioGroup>
 	);
 }
 

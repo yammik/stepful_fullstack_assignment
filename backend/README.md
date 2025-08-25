@@ -12,10 +12,48 @@ A middleware is sketched out with a hardcoded user ID in this demo. Incoming req
 
 ## 3. Resource Model
 
-Entities
+`Quiz`
 
-- `Quiz`: id title version questions[]
-- `Attempt`: id quizId userId current score finished updatedAt version
+```json
+{
+  "id": "string",
+  "title": "string",
+  "created_at": "ISO-8601"
+}
+```
+
+`Question`
+
+```json
+{
+  "id": "string",
+  "quiz_id": "string",
+  "question_content": "string",
+  "choices": "string",
+  "created_at": "ISO-8601"
+}
+```
+
+`Attempt`
+
+```json
+{
+  "id": "string",
+  "quiz_id": "string",
+  "user_id": "string",
+  "answer_selections": "string",
+  "score": 0,
+  "is_finished": false,
+  "created_at": "ISO-8601",
+  "updated_at": "ISO-8601"
+}
+```
+
+`Error`
+
+```json
+{ "error": { "code": "string", "message": "string", "details": {} } }
+```
 
 Invariants
 
@@ -148,7 +186,15 @@ Gets a specific attempt with the given ID.
 
 ##### Query Params
 
-- attemptId: ID of the attempt to update.
+- `attemptId`: ID of the attempt to update.
+
+##### Request
+
+The request should contain a body of stringified JSON of answer selections to be graded. The JSON is key-value pair of question ID and the answer.
+
+```json
+"{\"1\": \"Chicken bone\", \"2\": \"Cow bone\", \"3\": \"Example answer about bone here\"}"
+```
 
 ##### Response
 
@@ -159,7 +205,7 @@ Updates the specified attempt field `answer_selections` with a JSON blob. The JS
   "id": "1",
   "quiz_id": "1",
   "user_id": "1",
-  "answer_selections": "{\"1\": \"Tibia\", \"2\": \"Tibia\", \"3\": \"Example answer here\"}",
+  "answer_selections": "{\"1\": \"Chicken bone\", \"2\": \"Cow bone\", \"3\": \"Example answer about bone here\"}",
   "is_finished": 0,
   "time_elapsed": 0,
   "score": null,
@@ -171,7 +217,15 @@ Updates the specified attempt field `answer_selections` with a JSON blob. The JS
 
 ##### Query Params
 
-- attemptId: ID of the attempt to complete.
+- `attemptId`: ID of the attempt to complete.
+
+##### Request
+
+The request should contain a body of stringified JSON of answer selections to be graded. The JSON is key-value pair of question ID and the answer.
+
+```json
+"{\"1\": \"Chicken bone\", \"2\": \"Cow bone\", \"3\": \"Final answer about bone here\"}"
+```
 
 ##### Response
 
@@ -190,66 +244,35 @@ Updates the specified attempt to mark a completed quiz attempt. This means the a
 }
 ```
 
-## 5. Schemas
-
-Quiz
-
-```json
-{
-  "id": "string",
-  "title": "string",
-  "version": 0,
-  "questions": [{ "id": "string", "prompt": "string", "choices": ["string"] }]
-}
-```
-
-Attempt
-
-```json
-{
-  "id": "string",
-  "quiz_id": "string",
-  "user_id": "string",
-  "answer_selections": "string",
-  "score": 0,
-  "is_finished": false,
-  "updated_at": "ISO-8601"
-}
-```
-
-Error
-
-```json
-{ "error": { "code": "string", "message": "string", "details": {} } }
-```
-
-## 6. Error Catalog
+## 5. Error Catalog
 
 Not implemented yet, but these are possible errors for invalid answer selection payload, mismatching userId on an attempt, etc.
 
-- 400 invalid_payload
-- 401 unauthorized
-- 404 not_found
-- 409 conflict_out_of_order or conflict_duplicate_submit
-
- <!--
-- Should store attempt information, like time taken, how many times paused, final score
-- Ideally collect data from the quiz attempts to build a growth plan for student
-- Behavior analysis per question–collect time taken per question? see if AI can see a pattern
- -->
+- `400 invalid_payload`
+- `401 unauthorized`
+- `404 not_found`
 
 # Trade offs
 
 - _Updating answer choices on every question advance._ The choices are important data to save because they directly influence the final score. The final score is a part of licensure or employment success so should be treated with high fidelity and security.
 
-# Possible optimizations
+# TODO (Must haves)
 
-- _Question answer key table._ Answer keys could have been stored by a hashed column on the quiz_questions table. But an entirely separate table is better for least privilege and allows audit. endpoints that fetch quizzes never touch this table. Cons is that you have to do an extra join when grading, introduces more code lift and latency, and possible schema drift. I optimized for preventing leaks.
+- Handle edge cases like invalid payload on `POST`
+- `quiz` should have a `version` column and `attempt` should have a corresponding `quiz_version` so outdated attempts should be invalidated.
+- Needs a multiple choice question grading handler.
+- Needs to implement LLM for grading short answer questions.
+- A handler to grade and return feedback and score.
+- Idempotency key to prevent double submit.
+
+# Future features (Nice to haves)
+
+- _Question answer key table._ Answer keys could have been stored by a hashed column on the quiz_questions table. But an entirely separate table is better for least privilege and allows audit. Can help prevent leaks because the endpoints that fetch quizzes never touch this table. Cons is that you have to do an extra join when grading, introduces more code lift and latency, and possible schema drift.
 - A middleware for `attempt.user_id` ownership check.
+- Add an explicit field to `quiz_question` schema to specify multiple choice or free text instead of inferring from `choices` value.
+- More metrics stored in attempts, like time taken, how many times paused, and final score. Maybe metrics that can be used to build a growth plan for the student.
 
 # Notes about what I did
 
-- I did not implement a dedicated `GET /quizzes/{id}` endpoint, since `GET /quizzes` returns all the necessary data to display a detail page for each quiz.
 - Technically you could grade both MCQ and FT (free text) questions with LLM, but would incur increased infrastructural cost.
 - In production, I would not use autoincrementing integer as the primary key of a sensitive table like answer_keys.
-- `quiz` should have a `version` column and `attempt` should have a corresponding `quiz_version` so outdated attempts should be invalidated.

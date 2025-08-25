@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 
-export function QuizDetails({
+export function QuizView({
 	title,
 	hasAttempt,
 	onNext,

@@ -1,6 +1,6 @@
 import type { Attempt } from "@/components/attempt";
 import type { Quiz } from "@/components/quiz";
-import { QuizDetails } from "@/components/quiz-details";
+import { QuizView } from "@/components/quiz-view";
 import { QuizQuestions } from "@/components/quiz-questions";
 import { QuizResults } from "@/components/quiz-results";
 import {
@@ -167,7 +167,7 @@ export function QuizDetailsPage() {
 		switch (step) {
 			case Step.Details:
 				return (
-					<QuizDetails
+					<QuizView
 						title={quiz.title}
 						hasAttempt={!!attempt}
 						onNext={() => handleBeginQuiz()}
