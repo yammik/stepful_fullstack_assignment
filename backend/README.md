@@ -271,8 +271,5 @@ Not implemented yet, but these are possible errors for invalid answer selection 
 - A middleware for `attempt.user_id` ownership check.
 - Add an explicit field to `quiz_question` schema to specify multiple choice or free text instead of inferring from `choices` value.
 - More metrics stored in attempts, like time taken, how many times paused, and final score. Maybe metrics that can be used to build a growth plan for the student.
-
-# Notes about what I did
-
-- Technically you could grade both MCQ and FT (free text) questions with LLM, but would incur increased infrastructural cost.
-- In production, I would not use autoincrementing integer as the primary key of a sensitive table like answer_keys.
+- In production, I would not use autoincrementing integer as the primary key of a table.
+- Technically you could perhaps grade both MCQ and FT (free text) questions with LLM, but could incur increased infrastructural cost.
