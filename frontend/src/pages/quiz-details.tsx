@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import {
 	attemptAnswerApiUrl,
+	attemptApiUrl,
 	attemptFinishApiUrl,
 	quizActiveAttemptApiUrl,
 	quizApiUrl,
@@ -50,32 +51,62 @@ export function QuizDetailsPage() {
 			.catch(setError);
 	}, [id]);
 
-	const ensureCreateAttempt = useCallback((quizId: string) => {
-		fetch(quizActiveAttemptApiUrl({ id: quizId }))
-			.then((res) => res.json())
-			.then((json) => {
-				if (json.data) {
-					setAttempt(json.data);
-					return;
+	const getAttempt = useCallback((attemptId: string) => {
+		// Does this user already have an active attempt at this quiz?
+		return fetch(attemptApiUrl({ id: attemptId }))
+			.then((res) => {
+				if (res.status === 401) {
+					// TODO: Log out if user doesn't own this attempt
+					setError(new Error("Unauthorized"));
 				}
-				fetch(quizAttemptApiUrl({ id: quizId }), {
-					method: "POST",
-				})
-					.then((res) => res.json())
-					.then((json) => setAttempt(json.data));
-			});
+				if (res.status === 404) {
+					throw new Error("Attempt not found: please refresh the page.");
+				}
+				if (!res.ok) {
+					throw new Error(`Error while fetching attempt: ${res.status}`);
+				}
+				return res.json();
+			})
+			.catch(setError);
+	}, []);
+
+	const ensureCreateAttempt = useCallback((quizId: string) => {
+		return fetch(quizAttemptApiUrl({ id: quizId }), {
+			method: "POST",
+		})
+			.then((res) => {
+				if (!res.ok) {
+					throw new Error(`Error while creating attempt: ${res.status}`);
+				}
+				return res.json();
+			})
+			.catch(setError);
 	}, []);
 
 	const updateAnswerSelections = useCallback(
 		(body: string) => {
 			if (!attempt) return;
 
-			fetch(attemptAnswerApiUrl({ id: String(attempt.id) }), {
+			fetch(attemptAnswerApiUrl({ id: attempt.id.toString() }), {
 				method: "POST",
 				body,
 			})
-				.then((res) => res.json())
-				.then((json) => setAttempt(json.data));
+				.then((res) => {
+					if (res.status === 401) {
+						// TODO: Log out if 401
+						throw new Error("Unauthorized");
+					}
+					if (res.status === 404) {
+						// TODO: return to homepage if 404
+						throw new Error("Not Found");
+					}
+					if (!res.ok) {
+						throw new Error(
+							`Error while updating answer selections: ${res.status}`,
+						);
+					}
+				})
+				.catch(setError);
 		},
 		[attempt],
 	);
@@ -84,18 +115,50 @@ export function QuizDetailsPage() {
 		(body: string) => {
 			if (!attempt) return;
 
-			fetch(attemptFinishApiUrl({ id: String(attempt.id) }), {
+			fetch(attemptFinishApiUrl({ id: attempt.id.toString() }), {
 				method: "POST",
 				body,
 			})
-				.then((res) => res.json())
+				.then((res) => {
+					if (res.status === 401) {
+						// TODO: Log out if 401
+						throw new Error("Unauthorized");
+					}
+					if (res.status === 404) {
+						// TODO: return to homepage if 404
+						throw new Error("Not Found");
+					}
+					if (!res.ok) {
+						throw new Error(
+							`Error while submitting final answers: ${res.status}`,
+						);
+					}
+					return res.json();
+				})
 				.then((json) => {
 					setAttempt(json.data);
 					setStep(Step.Result);
-				});
+				})
+				.catch(setError);
 		},
 		[attempt],
 	);
+
+	const handleBeginQuiz = useCallback(() => {
+		if (!quiz) return;
+		// Refresh state if there is an attempt in state
+		// Stale attempt data will cause error and prompt the user to refresh
+		// If there isn't create one
+		const action = attempt
+			? getAttempt(attempt.id.toString())
+			: ensureCreateAttempt(quiz?.id.toString());
+		action.then((json) => {
+			if (json.data) {
+				setAttempt(json.data);
+				setStep(Step.Questions);
+			}
+		});
+	}, [quiz, attempt, getAttempt, ensureCreateAttempt]);
 
 	const StepContent = useCallback(() => {
 		if (!quiz) {
@@ -107,15 +170,11 @@ export function QuizDetailsPage() {
 					<QuizDetails
 						title={quiz.title}
 						hasAttempt={!!attempt}
-						onNext={() => {
-							ensureCreateAttempt(String(quiz.id));
-							setStep(Step.Questions);
-						}}
+						onNext={() => handleBeginQuiz()}
 					/>
 				);
 			case Step.Questions:
 				if (!attempt) {
-					// TODO: Better error/edge case handling here
 					return <div className="text-center p-8">Loading...</div>;
 				}
 				return (
@@ -139,9 +198,9 @@ export function QuizDetailsPage() {
 		step,
 		quiz,
 		attempt,
-		ensureCreateAttempt,
 		updateAnswerSelections,
 		finishAttempt,
+		handleBeginQuiz,
 	]);
 
 	if (error)

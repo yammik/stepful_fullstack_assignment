@@ -98,140 +98,155 @@ const ATTEMPTS_TABLE_NAME = "attempts";
 server.get<QuizzesRouteGeneric>(
 	"/quizzes/:id/attempts/active",
 	(request, reply) => {
-		const userId = request.user?.id ?? 1;
-		const data = db.prepare<{ userId: string; quizId: string }, Attempt>(`
+		const userId = request.user?.id ?? "1";
+		const query = db.prepare<{ userId: string; quizId: string }, Attempt>(`
 			SELECT ${ATTEMPTS_BASE_QUERY}
 			FROM ${ATTEMPTS_TABLE_NAME}
 			WHERE user_id = :userId
 			AND quiz_id = :quizId
 			AND is_finished = 0
 		`);
-
-		reply.send({
-			data: data.get({
-				userId: String(userId),
-				quizId: String(request.params.id),
-			}),
+		const data = query.get({
+			userId,
+			quizId: request.params.id,
 		});
+		// In this case, query may not return any data and that's part of the expected behavior
+
+		reply.send({ data });
 	},
 );
 
-/** POST /quizzes/:id/attempts reads or creates an attempt for a quiz */
+/** POST /quizzes/:id/attempts reads or creates (=ensure create) an attempt for a quiz */
 server.post<QuizzesRouteGeneric>("/quizzes/:id/attempts", (request, reply) => {
 	const userId = String(request.user?.id ?? 1);
 	const quizId = String(request.params.id);
 
 	// Do they already have an active attempt for this quiz?
-	const data = db.prepare<{ userId: string; quizId: string }, Attempt>(`
+	const query = db.prepare<{ userId: string; quizId: string }, Attempt>(`
 			SELECT ${ATTEMPTS_BASE_QUERY}
 			FROM ${ATTEMPTS_TABLE_NAME}
 			WHERE user_id = :userId
 			AND quiz_id = :quizId
 			AND is_finished = 0
 		`);
-
-	const attempt = data.get({ userId, quizId });
+	const attempt = query.get({ userId, quizId });
 
 	if (attempt) {
 		reply.send({ data: attempt });
+		return;
 	}
 
-	// Otherwise, make a new attempt
-	const insertStmt = db.prepare<{ userId: string; quizId: string }, Attempt>(`
+	// If not, make a new attempt
+	const insertQuery = db.prepare<{ userId: string; quizId: string }, Attempt>(`
 		INSERT INTO attempts
 			(user_id, quiz_id)
 		VALUES
 			(:userId, :quizId)
 	`);
-	const insert = insertStmt.run({ userId, quizId });
+	const insert = insertQuery.run({ userId, quizId });
 
-	const newAttempt = db.prepare<{ id: string }, Attempt>(`
+	const updatedQuery = db.prepare<{ id: string }, Attempt>(`
 			SELECT
 				${ATTEMPTS_BASE_QUERY}
 			FROM ${ATTEMPTS_TABLE_NAME}
 			WHERE id = :id
 		`);
 
-	reply.send({ data: newAttempt.get({ id: String(insert.lastInsertRowid) }) });
+	reply.send({
+		data: updatedQuery.get({ id: String(insert.lastInsertRowid) }),
+	});
 });
 
 /** GET /attempts fetches all active (unfinished) attempts belonging to a user across all quizzes */
 server.get("/attempts", (request, reply) => {
 	const userId = String(request.user?.id ?? 1);
-	// TODO: Add a query param to specify whether all attempts should be queried, or just active ones
-	const data = db.prepare<{ userId: string }, Attempt[]>(`
+	// TODO: Add a query param to allow filtering active/finished attempts
+	const query = db.prepare<{ userId: string }, Attempt[]>(`
 			SELECT ${ATTEMPTS_BASE_QUERY}
 			FROM ${ATTEMPTS_TABLE_NAME}
 			WHERE user_id = :userId
 			AND is_finished = 0
 		`);
 
-	reply.send({ data: data.all({ userId }) });
+	reply.send({ data: query.all({ userId }) });
 });
 
-/** GET /attempts/{id} fetches a user-scoped quiz attempt by ID */
+/** GET /attempts/{id} fetches a user-scoped active quiz attempt by ID */
 server.get<AttemptsRouteGeneric>("/attempts/:id", (request, reply) => {
 	const userId = String(request.user?.id ?? 1);
-	const data = db.prepare<{ id: string; userId: string }, Attempt>(`
+	// TODO: enable querying for finished attempts via query params
+	const query = db.prepare<{ id: string; userId: string }, Attempt>(`
 			SELECT ${ATTEMPTS_BASE_QUERY}
 			FROM ${ATTEMPTS_TABLE_NAME}
 			WHERE id = :id
 			AND user_id = :userId
+			AND is_finished = 0
 		`);
 
-	reply.send({ data: data.get({ id: request.params.id, userId }) });
+	const data = query.get({ id: request.params.id, userId });
+	if (!data) {
+		reply.code(404).send({ error: "Could not find attempt" });
+		return;
+	}
+	reply.send({ data });
 });
 
 /** POST /attempts/:id/answer updates an attempt with answer selections */
 server.post<AttemptsRouteGeneric>("/attempts/:id/answer", (request, reply) => {
 	// Verify attempt belongs to this user
 	const userId = request.user?.id ?? 1;
-	const data = db.prepare<{ id: string }, Attempt>(`
+	const query = db.prepare<{ id: string }, Attempt>(`
 		SELECT user_id FROM ${ATTEMPTS_TABLE_NAME} WHERE id = :id
 		`);
+	const attempt = query.get({ id: request.params.id });
 
-	const attempt = data.get({ id: request.params.id });
 	if (!attempt || attempt.user_id !== userId) {
-		// unauthorized
-		reply.code(404).send({ error: "No such attempt for user" });
+		// Attempt with this ID does not exist for calling user
+		reply.code(404).send({ error: "Could not find attempt" });
+		return;
+	}
+
+	if (attempt.is_finished) {
+		// Prevent updating an already finished attempt
+		reply.code(403).send({ error: "Cannot update attempt" });
 		return;
 	}
 
 	// Update answer selections
-	const updateStmt = db.prepare(`
+	const updateQuery = db.prepare(`
 		UPDATE ${ATTEMPTS_TABLE_NAME}
 		SET answer_selections = :answerSelections,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = :id
 	`);
-	updateStmt.run({
+	updateQuery.run({
 		id: request.params.id,
 		answerSelections: request.body,
 	});
 
-	const newAttempt = db.prepare<{ id: string }, Attempt>(`
+	const newAttemptQuery = db.prepare<{ id: string }, Attempt>(`
 		SELECT ${ATTEMPTS_BASE_QUERY}
 		FROM ${ATTEMPTS_TABLE_NAME}
 		WHERE id = :id
 		`);
 
-	reply.send({ data: newAttempt.get({ id: request.params.id }) });
+	reply.send({ data: newAttemptQuery.get({ id: request.params.id }) });
 });
 
 /** POST /attempts/:id/finish updates an attempt state to finished */
 server.post<AttemptsRouteGeneric>("/attempts/:id/finish", (request, reply) => {
 	// Verify attempt belongs to this user
 	const userId = request.user?.id ?? 1;
-	const data = db.prepare<{ id: string }, Attempt>(`
+	const query = db.prepare<{ id: string }, Attempt>(`
 		SELECT user_id
 		FROM ${ATTEMPTS_TABLE_NAME}
 		WHERE id = :id
 	`);
-	const attempt = data.get({ id: request.params.id });
+	const attempt = query.get({ id: request.params.id });
 
 	if (!attempt || attempt.user_id !== userId) {
-		// unauthorized
-		reply.code(404).send({ error: "No such attempt for user" });
+		// Attempt with this ID does not exist for calling user
+		reply.code(404).send({ error: "Could not find attempt" });
 		return;
 	}
 
@@ -242,7 +257,7 @@ server.post<AttemptsRouteGeneric>("/attempts/:id/finish", (request, reply) => {
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = :id
 	`);
-	const update = updateStmt.run({ id: request.params.id });
+	updateStmt.run({ id: request.params.id });
 
 	const updatedAttempt = db.prepare<{ id: string }, Attempt>(`
 			SELECT
@@ -252,7 +267,8 @@ server.post<AttemptsRouteGeneric>("/attempts/:id/finish", (request, reply) => {
 		`);
 
 	reply.send({ data: updatedAttempt.get({ id: request.params.id }) });
-	// Grading should happen at this point
+
+	// TODO: Grading should happen at this point
 });
 
 /**
