@@ -246,6 +246,7 @@ Not implemented yet, but these are possible errors for invalid answer selection 
 
 - _Question answer key table._ Answer keys could have been stored by a hashed column on the quiz_questions table. But an entirely separate table is better for least privilege and allows audit. endpoints that fetch quizzes never touch this table. Cons is that you have to do an extra join when grading, introduces more code lift and latency, and possible schema drift. I optimized for preventing leaks.
 - A middleware for `attempt.user_id` ownership check.
+- Add an explicit field to quiz_question schema to specify multiple choice or free text instead of inferring from `choices` value.
 
 # Notes about what I did
 
